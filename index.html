@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <title>BonusFera</title>
 
+  <!-- Telegram WebApp (не обязателен, но не мешает) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="style.css?v=3" />
+
+  <link rel="stylesheet" href="style.css?v=1" />
 </head>
 
 <body>
@@ -15,25 +17,30 @@
     <!-- MAIN -->
     <section id="main-screen" class="screen">
       <header class="topbar">
-        <h1 id="user-name" class="title">Загрузка…</h1>
- <button id="admin-trigger" class="admin-hitbox" type="button" aria-label="Admin"></button>
-  </div>
+        <!-- Имя + невидимая зона для админ-панели -->
+        <div class="name-wrap">
+          <h1 id="user-name" class="title">BONUSFERA</h1>
+          <button id="admin-trigger" class="admin-hitbox" type="button" aria-label="Admin"></button>
+        </div>
+
         <button id="to-profile" class="chip" type="button">Профиль</button>
       </header>
 
-      <div id="spins-display" class="stat">Загрузка…</div>
+      <div id="spins-display" class="stat">ДОСТУПНО ПРЕДЛОЖЕНИЙ: <b>3</b></div>
 
       <div class="card hero">
         <div class="hero__icon" aria-hidden="true">📋</div>
-        <div class="hero__title">Предложение дня</div>
-        <div class="hero__subtitle">Промокод или партнёрская акция</div>
+        <div class="hero__title">Демо-режим для креативов</div>
+        <div class="hero__subtitle">
+          Скрытая кнопка над именем открывает создание предложения.
+        </div>
       </div>
 
       <div id="btn-container" class="stack"></div>
 
       <footer class="footer">
         <p class="footer__text">
-          BonusFera — информационный онлайн-сервис с подборками промокодов и партнёрских предложений.
+          Demo-версия для записи креативов. Код генерируется автоматически.
         </p>
         <nav class="footer__links" aria-label="Документы">
           <a href="offer.html">Оферта</a>
@@ -48,16 +55,14 @@
       <header class="topbar">
         <button id="back-to-main" class="chip" type="button">Назад</button>
         <h1 class="title">История</h1>
-
       </header>
 
       <div id="history-list" class="history"></div>
     </section>
 
-    <!-- MODAL -->
+    <!-- MODAL: Offer -->
     <div id="prize-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal__content">
-
         <div class="modal__header">
           <span class="modal__spacer" aria-hidden="true"></span>
           <h2 id="modal-title" class="modal__title">ВАШЕ ПРЕДЛОЖЕНИЕ</h2>
@@ -74,13 +79,16 @@
             <span id="modal-promo-code" class="codebox__code"></span>
           </div>
 
-          <button id="modal-action-btn" class="btn" type="button">ДЕЙСТВИЕ</button>
+          <button id="modal-action-btn" class="btn" type="button">СКОПИРОВАТЬ</button>
         </div>
       </div>
     </div>
 
+    <!-- MODAL: Admin (создаётся скриптом динамически) -->
+    <!-- <div id="admin-modal">...</div> -->
+
   </main>
 
-  <script src="script.js?v=15"></script>
+  <script src="script.js?v=1"></script>
 </body>
 </html>
