@@ -518,3 +518,18 @@ body{
   color: rgba(0,0,0,.62);
   text-align: center;
 }
+
+.admin__row2{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn--small2{
+  width: auto;
+  padding: 12px 12px;
+  font-size: 12px;
+  letter-spacing: .6px;
+}
+
