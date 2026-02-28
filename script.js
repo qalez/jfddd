@@ -1,19 +1,17 @@
 /* =========================
    BonusFera CREO (GitHub demo)
    - No backend
-   - Always admin / always active
+   - Always active / always buttons work
    - Hidden admin button over username
    - Create custom offer -> "Get offer" returns it
    - History stored in localStorage
+   - Promo code auto-generated (letters+digits)
 ========================= */
 
 (function () {
   const tg = window.Telegram?.WebApp;
   try { tg?.expand?.(); } catch (_) {}
 
-  /* -----------------------
-     Helpers
-  ------------------------ */
   const $ = (id) => document.getElementById(id);
 
   const LS = {
@@ -68,6 +66,22 @@
   }
 
   /* -----------------------
+     Promo generator
+  ------------------------ */
+  function genPromoCode(len = 10) {
+    // без похожих символов (O/0, I/1), чтобы читалось в видео
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const arr = new Uint32Array(len);
+    (crypto?.getRandomValues ? crypto.getRandomValues(arr) : arr.fill(Date.now()));
+
+    let out = "";
+    for (let i = 0; i < len; i++) {
+      out += alphabet[arr[i] % alphabet.length];
+    }
+    return out;
+  }
+
+  /* -----------------------
      State (localStorage)
   ------------------------ */
   function loadJSON(key, fallback) {
@@ -89,14 +103,14 @@
   const state = {
     username: "BONUSFERA",
     sub_active: true,
-    spins: 1,
-    offer: null,   // то, что создаём через админ-модалку
-    history: [],   // выданные предложения
+    spins: 3,
+    offer: null,
+    history: [],
   };
 
   function loadState() {
     const spins = Number(localStorage.getItem(LS.spins));
-    state.spins = Number.isFinite(spins) && spins >= 0 ? spins : 1;
+    state.spins = Number.isFinite(spins) && spins >= 0 ? spins : 3;
 
     state.offer = loadJSON(LS.offer, null);
     state.history = loadJSON(LS.history, []);
@@ -114,7 +128,6 @@
   ------------------------ */
   function buildValidityText(offer) {
     if (!offer) return "";
-
     if (offer.expired) return "Срок действия истёк";
 
     const expires = offer.expires_at;
@@ -140,12 +153,10 @@
     const exp = offer.expires_at;
     if (!exp || exp === "∞") return false;
 
-    // поддержка YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(exp)) {
-      // считаем "до конца дня по МСК"
       const [y, m, d] = exp.split("-").map(Number);
-      // делаем 23:59:59 МСК, приблизительно (для демо нормально)
-      const dt = new Date(Date.UTC(y, m - 1, d, 20, 59, 59)); // ~23:59 МСК (UTC+3)
+      // до конца дня по МСК (приблизительно)
+      const dt = new Date(Date.UTC(y, m - 1, d, 20, 59, 59));
       return Date.now() > dt.getTime();
     }
 
@@ -155,7 +166,7 @@
   }
 
   /* -----------------------
-     Main modal (existing)
+     Main modal
   ------------------------ */
   function openOfferModal(offer) {
     const modal = $("prize-modal");
@@ -172,7 +183,6 @@
 
     const close = () => modal.classList.add("hidden");
 
-    // Инфо режим
     if (offer && offer._mode === "info") {
       modalTitle.innerText = "ИНФОРМАЦИЯ";
       modalIcon.innerText = "ℹ️";
@@ -185,7 +195,6 @@
       return;
     }
 
-    // Истёкшее
     if (offer && offer.expired) {
       modalTitle.innerText = "ИНФОРМАЦИЯ";
       modalIcon.innerText = "ℹ️";
@@ -198,7 +207,6 @@
       return;
     }
 
-    // Нормальное
     modalTitle.innerText = "ВАШЕ ПРЕДЛОЖЕНИЕ";
     modalIcon.innerText = offer.icon || "📌";
     offerName.innerText = safeText(offer.title || "Предложение");
@@ -248,13 +256,16 @@
           </label>
 
           <label class="admin__label">
-            Промокод
-            <input id="admin-code" class="admin__input" type="text" placeholder="Напр.: BONUS500" />
+            Промокод (авто)
+            <div class="admin__row2">
+              <input id="admin-code" class="admin__input" type="text" />
+              <button id="admin-gen" class="btn btn--secondary btn--small2" type="button">Сгенерировать</button>
+            </div>
           </label>
 
           <label class="admin__label">
             Активен до (∞ или дата)
-            <input id="admin-expires" class="admin__input" type="text" placeholder="∞ или 2026-03-31 или 2026-03-31T23:59:00" />
+            <input id="admin-expires" class="admin__input" type="text" placeholder="∞ или 2026-03-31 или 2026-03-31T23:59" />
           </label>
 
           <div class="admin__row">
@@ -263,7 +274,7 @@
           </div>
 
           <p class="admin__hint">
-            Подсказка: дату удобнее в формате <b>YYYY-MM-DD</b> или ISO <b>YYYY-MM-DDTHH:MM</b>.
+            Нажми “Сгенерировать”, чтобы код был уникальным и читабельным в видео.
           </p>
         </div>
       </div>
@@ -272,9 +283,11 @@
     document.body.appendChild(wrap);
 
     $("admin-close").onclick = () => wrap.classList.add("hidden");
-    wrap.addEventListener("click", (e) => {
-      if (e.target === wrap) wrap.classList.add("hidden");
-    });
+    wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.classList.add("hidden"); });
+
+    $("admin-gen").onclick = () => {
+      $("admin-code").value = genPromoCode(10);
+    };
 
     $("admin-save").onclick = () => {
       const title = safeText($("admin-title").value).trim();
@@ -282,7 +295,7 @@
       const expires = safeText($("admin-expires").value).trim() || "∞";
 
       if (!title) return tgAlert("Введите название.");
-      if (!code) return tgAlert("Введите промокод.");
+      if (!code) return tgAlert("Сгенерируйте или введите промокод.");
 
       const offer = {
         id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
@@ -312,14 +325,14 @@
   function openAdminModal() {
     ensureAdminModal();
 
-    // подставим текущее, если есть
+    // Автогенерация при открытии (чтобы не думать)
     if (state.offer) {
       $("admin-title").value = state.offer.title || "";
-      $("admin-code").value = state.offer.code || "";
+      $("admin-code").value = state.offer.code || genPromoCode(10);
       $("admin-expires").value = state.offer.expires_at || "∞";
     } else {
       $("admin-title").value = "";
-      $("admin-code").value = "";
+      $("admin-code").value = genPromoCode(10);
       $("admin-expires").value = "∞";
     }
 
@@ -330,29 +343,20 @@
      UI render
   ------------------------ */
   function updateUI() {
-    // username
     const userNameEl = $("user-name");
     if (userNameEl) userNameEl.innerText = state.username;
 
-    // spins
     const spinsDisplay = $("spins-display");
     if (spinsDisplay) spinsDisplay.innerHTML = `ДОСТУПНО ПРЕДЛОЖЕНИЙ: <b>${state.spins}</b>`;
 
-    // buttons
     const btnCont = $("btn-container");
     if (btnCont) {
       btnCont.innerHTML = "";
-
       btnCont.appendChild(makeButton("ПОЛУЧИТЬ ПРЕДЛОЖЕНИЕ ДНЯ", "btn", handleGetOffer));
-      btnCont.appendChild(
-        makeButton("ДОКУПИТЬ +1 ПРЕДЛОЖЕНИЕ (25 ₽)", "btn btn--secondary", () => addSpins(1))
-      );
-      btnCont.appendChild(
-        makeButton("ДОКУПИТЬ +10 ПРЕДЛОЖЕНИЙ (200 ₽)", "btn btn--secondary", () => addSpins(10))
-      );
+      btnCont.appendChild(makeButton("ДОКУПИТЬ +1 (25 ₽)", "btn btn--secondary", () => addSpins(1)));
+      btnCont.appendChild(makeButton("ДОКУПИТЬ +10 (200 ₽)", "btn btn--secondary", () => addSpins(10)));
     }
 
-    // history
     const historyList = $("history-list");
     if (historyList) {
       historyList.innerHTML = "";
@@ -366,43 +370,40 @@
         </div>`;
         historyList.appendChild(empty);
       } else {
-        state.history
-          .slice()
-          .reverse()
-          .forEach((item) => {
-            const row = document.createElement("div");
-            row.className = "history-item";
+        state.history.slice().reverse().forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "history-item";
 
-            const left = document.createElement("div");
-            left.className = "history-item__left";
+          const left = document.createElement("div");
+          left.className = "history-item__left";
 
-            const title = document.createElement("div");
-            title.className = "history-item__title";
-            title.innerText = safeText(item.title);
+          const title = document.createElement("div");
+          title.className = "history-item__title";
+          title.innerText = safeText(item.title);
 
-            const meta = document.createElement("div");
-            meta.className = "history-item__meta";
+          const meta = document.createElement("div");
+          meta.className = "history-item__meta";
 
-            if (item.expired) {
-              meta.innerHTML = `<span class="badge-expired">истёк срок</span>`;
-            } else {
-              const exp = item.expires_at;
-              if (!exp || exp === "∞") meta.innerText = "без срока действия";
-              else {
-                const d = parseISO(exp);
-                meta.innerText = d ? `до ${formatDateTimeRU(d)} (МСК)` : `до ${exp}`;
-              }
+          if (item.expired) {
+            meta.innerHTML = `<span class="badge-expired">истёк срок</span>`;
+          } else {
+            const exp = item.expires_at;
+            if (!exp || exp === "∞") meta.innerText = "без срока действия";
+            else {
+              const d = parseISO(exp);
+              meta.innerText = d ? `до ${formatDateTimeRU(d)} (МСК)` : `до ${exp}`;
             }
+          }
 
-            left.appendChild(title);
-            left.appendChild(meta);
+          left.appendChild(title);
+          left.appendChild(meta);
 
-            const openBtn = makeButton("ОТКРЫТЬ", "btn btn--small", () => openOfferModal(item));
+          const openBtn = makeButton("ОТКРЫТЬ", "btn btn--small", () => openOfferModal(item));
+          row.appendChild(left);
+          row.appendChild(openBtn);
 
-            row.appendChild(left);
-            row.appendChild(openBtn);
-            historyList.appendChild(row);
-          });
+          historyList.appendChild(row);
+        });
       }
     }
   }
@@ -419,34 +420,21 @@
   ------------------------ */
   function handleGetOffer() {
     if (state.spins <= 0) {
-      openOfferModal({
-        _mode: "info",
-        message: "Нет доступных предложений. Добавьте предложения кнопками ниже.",
-      });
+      openOfferModal({ _mode: "info", message: "Нет доступных предложений. Добавьте предложения кнопками ниже." });
       return;
     }
 
     if (!state.offer) {
-      openOfferModal({
-        _mode: "info",
-        message: "Сначала создайте предложение: нажмите на скрытую кнопку над именем BONUSFERA.",
-      });
+      openOfferModal({ _mode: "info", message: "Сначала создайте предложение: нажмите на скрытую кнопку над именем." });
       return;
     }
 
     const offerToGive = { ...state.offer };
-
-    // отметим истечение
     if (isExpired(offerToGive)) offerToGive.expired = true;
 
-    // списываем 1 “получение”
     state.spins -= 1;
 
-    // добавляем в историю
-    state.history.push({
-      ...offerToGive,
-      received_at: new Date().toISOString(),
-    });
+    state.history.push({ ...offerToGive, received_at: new Date().toISOString() });
 
     persistState();
     updateUI();
@@ -460,17 +448,12 @@
     loadState();
     ensureAdminModal();
 
-    // навигация
     $("to-profile")?.addEventListener("click", () => showScreen("profile"));
     $("back-to-main")?.addEventListener("click", () => showScreen("main"));
 
-    // закрытие основной модалки
     $("close-modal")?.addEventListener("click", () => $("prize-modal")?.classList.add("hidden"));
-    $("prize-modal")?.addEventListener("click", (e) => {
-      if (e.target === $("prize-modal")) $("prize-modal").classList.add("hidden");
-    });
+    $("prize-modal")?.addEventListener("click", (e) => { if (e.target === $("prize-modal")) $("prize-modal").classList.add("hidden"); });
 
-    // скрытая кнопка над именем (должна быть в HTML)
     const adminBtn = $("admin-trigger");
     if (adminBtn) {
       adminBtn.addEventListener("click", (e) => {
@@ -478,8 +461,6 @@
         e.stopPropagation();
         openAdminModal();
       });
-    } else {
-      console.warn("admin-trigger button not found in HTML. Add it to index.html (see below).");
     }
 
     updateUI();
