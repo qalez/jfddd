@@ -378,14 +378,14 @@
     const add1 = document.createElement("button");
     add1.className = "btn btn--secondary";
     add1.type = "button";
-    add1.innerText = "ДОКУПИТЬ +1 (DEMO)";
+    add1.innerText = "ДОКУПИТЬ +1";
     add1.onclick = () => { state.spins += 1; persistState(); updateUI(); };
     btnCont.appendChild(add1);
 
     const add10 = document.createElement("button");
     add10.className = "btn btn--secondary";
     add10.type = "button";
-    add10.innerText = "ДОКУПИТЬ +10 (DEMO)";
+    add10.innerText = "ДОКУПИТЬ +10";
     add10.onclick = () => { state.spins += 10; persistState(); updateUI(); };
     btnCont.appendChild(add10);
 
@@ -478,3 +478,4 @@
     updateUI();
   });
 })();
+
