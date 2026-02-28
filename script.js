@@ -187,7 +187,7 @@
     ctx.font = "900 12px Inter, Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("BONUSFERA", cx, cy);
+    ctx.fillText("B", cx, cy);
   }
 
   function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
@@ -478,4 +478,5 @@
     updateUI();
   });
 })();
+
 
