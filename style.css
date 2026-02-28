@@ -533,3 +533,12 @@ body{
   letter-spacing: .6px;
 }
 
+
+.name-wrap{ position: relative; display: inline-block; max-width: 260px; }
+.admin-hitbox{
+  position: absolute; left:0; top:0;
+  width:100%; height:44px;
+  border:0; background:transparent; opacity:0;
+  z-index:5; cursor:pointer;
+}
+
